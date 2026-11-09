@@ -1,0 +1,25 @@
+wundspray
+Copyright (c) 2026 Francesco Donadon
+
+This product includes software developed as part of the url-sanitize project:
+  https://github.com/antonio-orionus/url-sanitize
+
+  - url-sanitize-core (Rust engine): MIT
+    https://crates.io/crates/url-sanitize-core
+    Copyright (c) antonio-orionus and contributors
+
+  - Merged sanitizer catalog embedded at catalog/catalog.json
+    Pin: see catalog/PIN.txt (upstream tag v2.4.1)
+
+    Catalog sources and rule-data licenses:
+      * ClearURLs rules — LGPL-3.0-only
+        https://github.com/ClearURLs/Rules
+      * Brave clean-URLs / debouncer lists — MPL-2.0
+        https://github.com/brave/adblock-lists
+      * Firefox query stripping records — MPL-2.0 (as labelled by url-sanitize)
+        Mozilla Remote Settings
+
+wundspray itself does not embed the AdGuard (GPL-3.0) catalog.
+
+Full upstream license model:
+  https://github.com/antonio-orionus/url-sanitize/blob/main/docs/license-model.md

@@ -1,0 +1,183 @@
+openapi: 3.1.0
+info:
+  title: wundspray
+  version: 0.1.0
+  summary: Strip tracking parameters and unwrap tracking redirects from URLs
+  description: |
+    Tiny HTTP service that sanitizes a single URL using
+    [url-sanitize](https://github.com/antonio-orionus/url-sanitize) /
+    `url-sanitize-core`.
+
+    Service defaults (stricter than upstream CLI defaults):
+      - strip referral-marketing parameters: enabled
+      - unwrap redirects: enabled
+      - domain blocking: disabled (responses always include a usable `url`)
+  license:
+    name: MIT
+    identifier: MIT
+  contact:
+    name: Francesco Donadon
+
+servers:
+  - url: http://localhost:8080
+    description: Local default
+
+tags:
+  - name: sanitize
+  - name: health
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+
+  /sanitize:
+    post:
+      tags: [sanitize]
+      operationId: sanitizeUrl
+      summary: Sanitize a URL
+      description: |
+        Accepts a URL, strips tracking / referral-marketing parameters, and
+        unwraps known tracking redirectors. Returns a stable snake_case
+        envelope (not the raw url-sanitize `SanitizeResult`).
+
+        Matched-rule explainability is available in process logs when
+        `LOG_LEVEL=debug` (or `trace`); it is never returned in this response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SanitizeRequest"
+            examples:
+              tracking:
+                summary: UTM parameters
+                value:
+                  url: https://example.com/a?id=1&utm_source=newsletter
+              redirect:
+                summary: Google redirect unwrap
+                value:
+                  url: https://www.google.com/url?q=https%3A%2F%2Fexample.org%2Fpage&sa=U
+      responses:
+        "200":
+          description: Sanitization result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SanitizeResponse"
+              examples:
+                cleaned:
+                  value:
+                    input: https://example.com/a?id=1&utm_source=newsletter
+                    url: https://example.com/a?id=1
+                    changed: true
+                    action: cleaned
+                    stripped_params: [utm_source]
+                    blocked: false
+                redirected:
+                  value:
+                    input: https://www.google.com/url?q=https%3A%2F%2Fexample.org%2Fpage&sa=U
+                    url: https://example.org/page
+                    changed: true
+                    action: redirected
+                    stripped_params: []
+                    blocked: false
+                unchanged:
+                  value:
+                    input: https://example.com/plain
+                    url: https://example.com/plain
+                    changed: false
+                    action: unchanged
+                    stripped_params: []
+                    blocked: false
+        "400":
+          description: Invalid JSON body or empty `url`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                empty:
+                  value:
+                    error: invalid_url
+                    message: url must be a non-empty string
+                bad_json:
+                  value:
+                    error: invalid_json
+                    message: Failed to parse the request body as JSON
+
+components:
+  schemas:
+    SanitizeRequest:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+          minLength: 1
+          description: Absolute or relative URL-like string to sanitize
+          examples:
+            - https://example.com/a?utm_source=x
+
+    SanitizeResponse:
+      type: object
+      additionalProperties: false
+      required: [input, url, changed, action, stripped_params, blocked]
+      properties:
+        input:
+          type: string
+          description: Original URL that was sanitized
+        url:
+          type: [string, "null"]
+          description: |
+            Resulting URL. Always a string while domain blocking is disabled
+            (service default). `null` only if `blocked` is true.
+        changed:
+          type: boolean
+          description: Whether the output differs from the input semantics
+        action:
+          $ref: "#/components/schemas/Action"
+        stripped_params:
+          type: array
+          items:
+            type: string
+          description: Parameter names removed when `action` is `cleaned`
+        blocked:
+          type: boolean
+          description: True only when a block-domain rule fired
+
+    Action:
+      type: string
+      enum: [unchanged, cleaned, redirected, blocked]
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+
+    ErrorBody:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          examples: [invalid_url, invalid_json]
+        message:
+          type: string
