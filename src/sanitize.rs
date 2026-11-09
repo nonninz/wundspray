@@ -59,7 +59,9 @@ mod tests {
         );
         match result {
             SanitizeResult::Cleaned {
-                url, stripped_params, ..
+                url,
+                stripped_params,
+                ..
             } => {
                 assert_eq!(url, "https://example.com/article?id=123");
                 assert!(stripped_params.iter().any(|p| p == "utm_source"));
@@ -77,7 +79,9 @@ mod tests {
         );
         match result {
             SanitizeResult::Cleaned {
-                url, stripped_params, ..
+                url,
+                stripped_params,
+                ..
             } => {
                 assert!(
                     !url.contains("tag="),

@@ -146,7 +146,9 @@ async fn sanitize_rejects_missing_url_field() {
                 .method("POST")
                 .uri("/sanitize")
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "link": "https://example.com" }).to_string()))
+                .body(Body::from(
+                    json!({ "link": "https://example.com" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await

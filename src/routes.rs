@@ -64,11 +64,7 @@ async fn sanitize_handler(
                 latency_ms = started.elapsed().as_millis() as u64,
                 "sanitize rejected"
             );
-            return error_response(
-                StatusCode::BAD_REQUEST,
-                "invalid_json",
-                err.body_text(),
-            );
+            return error_response(StatusCode::BAD_REQUEST, "invalid_json", err.body_text());
         }
     };
 

@@ -72,11 +72,7 @@ pub fn map_result(input: &str, result: SanitizeResult) -> MappedSanitize {
                 via: None,
             },
         },
-        SanitizeResult::Redirected {
-            original,
-            url,
-            via,
-        } => MappedSanitize {
+        SanitizeResult::Redirected { original, url, via } => MappedSanitize {
             response: SanitizeResponse {
                 input: original,
                 url: Some(url),
@@ -151,13 +147,11 @@ mod tests {
             mapped.response.url.as_deref(),
             Some("https://example.com/article?id=1")
         );
-        assert!(
-            mapped
-                .response
-                .stripped_params
-                .iter()
-                .any(|p| p == "utm_source")
-        );
+        assert!(mapped
+            .response
+            .stripped_params
+            .iter()
+            .any(|p| p == "utm_source"));
         assert!(!mapped.details.matched_rules.is_empty());
     }
 
