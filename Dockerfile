@@ -3,11 +3,11 @@
 # Build a fully static musl binary, then ship it on scratch with license files.
 FROM rust:1.99-alpine AS builder
 
-RUN apk add --no-cache musl-dev
+RUN apk add --no-cache musl-dev file
 
 WORKDIR /app
 
-# Dependency layer cache
+# Dependency layer cache (dynamic musl build — proc-macros need this)
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src \
     && printf 'fn main() {}\n' > src/main.rs \
@@ -18,10 +18,13 @@ RUN mkdir src \
 COPY catalog ./catalog
 COPY src ./src
 
-# Force rebuild of our crate after sources land
+# Rebuild our crate, then re-link only the final binary as fully static so
+# proc-macro deps stay usable while the shipped binary runs on scratch.
 RUN touch src/main.rs src/lib.rs \
-    && RUSTFLAGS="-C target-feature=+crt-static" cargo build --release \
-    && strip target/release/wundspray
+    && cargo build --release \
+    && cargo rustc --release --bin wundspray -- -C target-feature=+crt-static \
+    && strip target/release/wundspray \
+    && test "$(file -b target/release/wundspray | grep -c 'statically linked')" -ge 1
 
 FROM scratch
 
