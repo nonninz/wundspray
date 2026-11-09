@@ -132,13 +132,29 @@ docker run --rm -p 8080:8080 -e LOG_LEVEL=info wundspray
 
 No outbound network is required at runtime (catalog is embedded).
 
-### GHCR (automation)
+### Releasing / GHCR
 
-The `image` workflow (see `.github/workflows/image.yml`) builds and pushes
-`ghcr.io/nonninz/wundspray` on `main` and `v*` tags:
+Version lives in two places that must stay aligned on a release:
+
+| Source | Role |
+| --- | --- |
+| `Cargo.toml` `version` (and `openapi.yaml` `info.version`) | In-repo package / API version; embedded in the binary via `CARGO_PKG_VERSION` |
+| GitHub Release tag `vX.Y.Z` | User-facing release; drives GHCR image tags |
+
+The `image` workflow (`.github/workflows/image.yml`) runs **only when a GitHub
+Release is published**. It fails if `Cargo.toml`’s package version does not
+exactly match the release tag without the leading `v` (so `v1.2.3` requires
+`version = "1.2.3"`).
+
+Checklist:
+
+1. Bump `Cargo.toml` `version` and `openapi.yaml` `info.version` to `X.Y.Z`.
+2. Commit that bump to `main`.
+3. Create a GitHub Release with tag `vX.Y.Z` pointing at that commit.
+4. Wait for the `image` workflow; it pushes:
 
 ```sh
-docker pull ghcr.io/nonninz/wundspray:main
+docker pull ghcr.io/nonninz/wundspray:X.Y.Z   # also :X.Y and :latest
 ```
 
 First-time GHCR notes:
