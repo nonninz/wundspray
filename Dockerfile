@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# Build a fully static musl binary, then ship it alone on scratch.
+# Build a fully static musl binary, then ship it on scratch with license files.
 FROM rust:1.99-alpine AS builder
 
 RUN apk add --no-cache musl-dev
@@ -26,6 +26,9 @@ RUN touch src/main.rs src/lib.rs \
 FROM scratch
 
 COPY --from=builder /app/target/release/wundspray /wundspray
+COPY LICENSE NOTICE /licenses/
+COPY LICENSES/ /licenses/LICENSES/
+COPY catalog/PIN.txt /licenses/catalog-PIN.txt
 
 ENV PORT=8080 \
     LOG_LEVEL=info

@@ -1,25 +1,71 @@
 wundspray
 Copyright (c) 2026 Francesco Donadon
 
-This product includes software developed as part of the url-sanitize project:
+========================================================================
+Distributed work license
+========================================================================
+
+wundspray service code is MIT (see LICENSE and LICENSES/MIT.txt).
+
+The release binary and container image embed the url-sanitize merged rule
+catalog, so the *distributed binary/image* is:
+
+  MIT AND LGPL-3.0-only AND MPL-2.0
+
+Full texts: LICENSES/
+
+========================================================================
+url-sanitize (engine)
+========================================================================
+
+This product uses url-sanitize-core from the url-sanitize project:
+
   https://github.com/antonio-orionus/url-sanitize
+  https://crates.io/crates/url-sanitize-core
 
-  - url-sanitize-core (Rust engine): MIT
-    https://crates.io/crates/url-sanitize-core
-    Copyright (c) antonio-orionus and contributors
+  Engine license: MIT (LICENSES/url-sanitize-MIT.txt)
+  Copyright (c) 2026 Antonio Orionus and contributors
 
-  - Merged sanitizer catalog embedded at catalog/catalog.json
-    Pin: see catalog/PIN.txt (upstream tag v2.4.1)
-
-    Catalog sources and rule-data licenses:
-      * ClearURLs rules — LGPL-3.0-only
-        https://github.com/ClearURLs/Rules
-      * Brave clean-URLs / debouncer lists — MPL-2.0
-        https://github.com/brave/adblock-lists
-      * Firefox query stripping records — MPL-2.0 (as labelled by url-sanitize)
-        Mozilla Remote Settings
-
-wundspray itself does not embed the AdGuard (GPL-3.0) catalog.
-
-Full upstream license model:
+Upstream license model:
   https://github.com/antonio-orionus/url-sanitize/blob/main/docs/license-model.md
+
+wundspray is not affiliated with or endorsed by antonio-orionus, ClearURLs,
+Brave, Mozilla, or AdGuard.
+
+========================================================================
+Embedded catalog (rule data)
+========================================================================
+
+File: catalog/catalog.json
+Pin:  catalog/PIN.txt  (upstream tag v2.4.1 / url-sanitize-core 2.4.1)
+
+Sources bundled in that catalog:
+
+  - ClearURLs Rules
+    https://github.com/ClearURLs/Rules
+    License: LGPL-3.0-only  (LICENSES/LGPL-3.0-only.txt)
+
+  - Brave Debouncer / query-filter / clean-URLs lists
+    https://github.com/brave/adblock-lists
+    License: MPL-2.0  (LICENSES/MPL-2.0.txt)
+
+  - Firefox Query Stripping records (Mozilla Remote Settings)
+    License: MPL-2.0 as labelled by url-sanitize  (LICENSES/MPL-2.0.txt)
+
+The AdGuard URL Tracking filter (GPL-3.0) is NOT included.
+
+========================================================================
+Corresponding source (LGPL / MPL)
+========================================================================
+
+Catalog source as shipped: catalog/catalog.json in this repository
+(and the git tag/commit that built a given release).
+
+To rebuild wundspray with unmodified or modified rule data:
+
+  1. Replace or edit catalog/catalog.json
+  2. cargo build --release
+  # or: docker build -t wundspray .
+
+Upstream catalog provenance for the pinned tag:
+  https://github.com/antonio-orionus/url-sanitize/tree/v2.4.1/crates/url-sanitize/catalog

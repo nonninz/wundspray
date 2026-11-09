@@ -8,24 +8,32 @@ envelope**.
 
 Built for a small Docker footprint (static musl binary on `scratch`).
 
-## Credits
+## Credits & licenses
 
 URL sanitization is powered entirely by
 [**url-sanitize**](https://github.com/antonio-orionus/url-sanitize) /
 [`url-sanitize-core`](https://crates.io/crates/url-sanitize-core) by
 [antonio-orionus](https://github.com/antonio-orionus).
 
-| Piece | License |
-| --- | --- |
-| `url-sanitize-core` engine | MIT |
-| Embedded merged catalog (ClearURLs / Brave / Firefox) | LGPL-3.0 / MPL-2.0 |
-| wundspray service code | MIT |
+| Piece | License | Where |
+| --- | --- | --- |
+| wundspray service code | MIT | [`LICENSE`](LICENSE), [`LICENSES/MIT.txt`](LICENSES/MIT.txt) |
+| `url-sanitize-core` engine | MIT | [`LICENSES/url-sanitize-MIT.txt`](LICENSES/url-sanitize-MIT.txt) |
+| ClearURLs rule data | LGPL-3.0-only | [`LICENSES/LGPL-3.0-only.txt`](LICENSES/LGPL-3.0-only.txt) |
+| Brave / Firefox rule data | MPL-2.0 | [`LICENSES/MPL-2.0.txt`](LICENSES/MPL-2.0.txt) |
 
-Catalog pin and hashes: [`catalog/PIN.txt`](catalog/PIN.txt).  
-Third-party attribution: [`NOTICE`](NOTICE).
+Because the release **binary and Docker image embed the catalog**, the
+distributed artifact is **MIT AND LGPL-3.0-only AND MPL-2.0**.
+
+- Attribution + how to rebuild with modified rules: [`NOTICE`](NOTICE)
+- Catalog pin / hashes: [`catalog/PIN.txt`](catalog/PIN.txt)
+- Image ships the same texts under `/licenses/`
 
 AdGuard rules are **not** included (GPL-3.0 upstream data; opt-in in
 url-sanitize, out of scope here).
+
+This project is not affiliated with or endorsed by antonio-orionus, ClearURLs,
+Brave, Mozilla, or AdGuard.
 
 ## API
 
@@ -133,6 +141,6 @@ make check        # fmt-check + lint + test
 
 ## License
 
-MIT for wundspray code — see [`LICENSE`](LICENSE).  
-Respect upstream catalog licenses when distributing the binary/image; see
-[`NOTICE`](NOTICE).
+- Source (this repo’s Rust code): MIT — [`LICENSE`](LICENSE)
+- Binary / container (embeds catalog): MIT AND LGPL-3.0-only AND MPL-2.0 —
+  see [`NOTICE`](NOTICE) and [`LICENSES/`](LICENSES/)
