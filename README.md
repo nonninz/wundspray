@@ -1,5 +1,7 @@
 # wundspray
 
+[![ci](https://github.com/OWNER/wundspray/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/wundspray/actions/workflows/ci.yml)
+
 Tiny HTTP service: give it a URL, get back a cleaned one.
 
 It unwraps tracking redirects and strips tracking parameters — including
@@ -129,6 +131,16 @@ docker run --rm -p 8080:8080 -e LOG_LEVEL=info wundspray
 ```
 
 No outbound network is required at runtime (catalog is embedded).
+
+### GHCR (automation)
+
+The `image` workflow (see `.github/workflows/image.yml`) builds and pushes
+`ghcr.io/<owner>/wundspray` on `main` and `v*` tags. After the GitHub repo
+exists, replace `OWNER` in the CI badge above and pull with:
+
+```sh
+docker pull ghcr.io/<owner>/wundspray:main
+```
 
 ## Development
 
