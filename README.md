@@ -1,5 +1,7 @@
 # wundspray
 
+[![ci](https://github.com/nonninz/wundspray/actions/workflows/ci.yml/badge.svg)](https://github.com/nonninz/wundspray/actions/workflows/ci.yml)
+
 Tiny HTTP service: give it a URL, get back a cleaned one.
 
 It unwraps tracking redirects and strips tracking parameters — including
@@ -129,6 +131,39 @@ docker run --rm -p 8080:8080 -e LOG_LEVEL=info wundspray
 ```
 
 No outbound network is required at runtime (catalog is embedded).
+
+### Releasing / GHCR
+
+Version lives in two places that must stay aligned on a release:
+
+| Source | Role |
+| --- | --- |
+| `Cargo.toml` `version` (and `openapi.yaml` `info.version`) | In-repo package / API version; embedded in the binary via `CARGO_PKG_VERSION` |
+| GitHub Release tag `vX.Y.Z` | User-facing release; drives GHCR image tags |
+
+The `image` workflow (`.github/workflows/image.yml`) runs **only when a GitHub
+Release is published**. It first runs the same fmt/clippy/test checks as `ci`
+(via reusable `.github/workflows/rust-check.yml`), then fails if `Cargo.toml`’s
+package version does not exactly match the release tag without the leading `v`
+(so `v1.2.3` requires `version = "1.2.3"`). GHCR is pushed only if both pass.
+
+Checklist:
+
+1. Bump `Cargo.toml` `version` and `openapi.yaml` `info.version` to `X.Y.Z`.
+2. Commit that bump to `main`.
+3. Create a GitHub Release with tag `vX.Y.Z` pointing at that commit.
+4. Wait for the `image` workflow; it pushes:
+
+```sh
+docker pull ghcr.io/nonninz/wundspray:X.Y.Z   # also :X.Y, :X, and :latest
+```
+
+First-time GHCR notes:
+- Repo **Settings → Actions → General**: workflows permitted; GITHUB_TOKEN can
+  create/read/write packages (default for `packages: write` permission).
+- After the first push, if the package is private, grant access under
+  **Packages** or make it public.
+- Optional: add package README / link the package back to this repo in GHCR.
 
 ## Development
 
