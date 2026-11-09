@@ -1,0 +1,13 @@
+[package]
+name = "wundspray"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Tiny HTTP service that unwraps tracking redirects and strips tracking parameters from URLs"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/antonio-orionus/wundspray"
+
+[dependencies]
+
+[dev-dependencies]

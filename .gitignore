@@ -1,0 +1,16 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Env / local
+.env
+.env.*
+!.env.example
