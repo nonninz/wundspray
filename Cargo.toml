@@ -9,5 +9,6 @@ readme = "README.md"
 repository = "https://github.com/antonio-orionus/wundspray"
 
 [dependencies]
+url-sanitize-core = "2.4.1"
 
 [dev-dependencies]

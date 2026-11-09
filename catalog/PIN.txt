@@ -1,0 +1,13 @@
+Upstream: https://github.com/antonio-orionus/url-sanitize
+Tag:      v2.4.1
+Commit:   5448691a5cc5b3a14c5cb91722804743716dc003
+Path:     crates/url-sanitize/catalog/catalog.json
+Crate:    url-sanitize-core 2.4.1
+
+Catalog identity: merged(ccc0b05a867d,e7337077043c,61578ba740b7)
+generatedAt:      2026-11-06T20:23:51.176Z
+
+Licenses (rule data):
+  clearurls  LGPL-3.0-only
+  brave      MPL-2.0
+  firefox    MPL-2.0
