@@ -142,9 +142,10 @@ Version lives in two places that must stay aligned on a release:
 | GitHub Release tag `vX.Y.Z` | User-facing release; drives GHCR image tags |
 
 The `image` workflow (`.github/workflows/image.yml`) runs **only when a GitHub
-Release is published**. It fails if `Cargo.toml`’s package version does not
-exactly match the release tag without the leading `v` (so `v1.2.3` requires
-`version = "1.2.3"`).
+Release is published**. It first runs the same fmt/clippy/test checks as `ci`
+(via reusable `.github/workflows/rust-check.yml`), then fails if `Cargo.toml`’s
+package version does not exactly match the release tag without the leading `v`
+(so `v1.2.3` requires `version = "1.2.3"`). GHCR is pushed only if both pass.
 
 Checklist:
 

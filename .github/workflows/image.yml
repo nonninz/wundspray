@@ -17,8 +17,12 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check:
+    uses: ./.github/workflows/rust-check.yml
+
   build-and-push:
     name: build · push GHCR
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
