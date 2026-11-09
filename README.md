@@ -154,7 +154,7 @@ Checklist:
 4. Wait for the `image` workflow; it pushes:
 
 ```sh
-docker pull ghcr.io/nonninz/wundspray:X.Y.Z   # also :X.Y and :latest
+docker pull ghcr.io/nonninz/wundspray:X.Y.Z   # also :X.Y, :X, and :latest
 ```
 
 First-time GHCR notes:
