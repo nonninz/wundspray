@@ -24,7 +24,8 @@ RUN touch src/main.rs src/lib.rs \
     && cargo build --release \
     && cargo rustc --release --bin wundspray -- -C target-feature=+crt-static \
     && strip target/release/wundspray \
-    && test "$(file -b target/release/wundspray | grep -c 'statically linked')" -ge 1
+    && file -b target/release/wundspray \
+    && test "$(file -b target/release/wundspray | grep -Ec 'statically linked|static-pie linked')" -ge 1
 
 FROM scratch
 
