@@ -1,6 +1,6 @@
 # wundspray
 
-[![ci](https://github.com/OWNER/wundspray/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/wundspray/actions/workflows/ci.yml)
+[![ci](https://github.com/nonninz/wundspray/actions/workflows/ci.yml/badge.svg)](https://github.com/nonninz/wundspray/actions/workflows/ci.yml)
 
 Tiny HTTP service: give it a URL, get back a cleaned one.
 
@@ -135,12 +135,18 @@ No outbound network is required at runtime (catalog is embedded).
 ### GHCR (automation)
 
 The `image` workflow (see `.github/workflows/image.yml`) builds and pushes
-`ghcr.io/<owner>/wundspray` on `main` and `v*` tags. After the GitHub repo
-exists, replace `OWNER` in the CI badge above and pull with:
+`ghcr.io/nonninz/wundspray` on `main` and `v*` tags:
 
 ```sh
-docker pull ghcr.io/<owner>/wundspray:main
+docker pull ghcr.io/nonninz/wundspray:main
 ```
+
+First-time GHCR notes:
+- Repo **Settings → Actions → General**: workflows permitted; GITHUB_TOKEN can
+  create/read/write packages (default for `packages: write` permission).
+- After the first push, if the package is private, grant access under
+  **Packages** or make it public.
+- Optional: add package README / link the package back to this repo in GHCR.
 
 ## Development
 
