@@ -1,0 +1,14 @@
+.git
+.github
+target
+tests
+Makefile
+rustfmt.toml
+README.md
+openapi.yaml
+NOTICE
+LICENSE
+LICENSES
+**/*.md
+.env
+.env.*
