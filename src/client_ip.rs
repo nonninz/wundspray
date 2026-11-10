@@ -221,10 +221,7 @@ mod tests {
         let trusted = parse_trusted_proxies("10.0.0.0/8").unwrap();
         let peer_addr = peer("10.0.0.5", 8080);
         let hdrs = headers(&[
-            (
-                "forwarded",
-                "for=198.51.100.7;proto=https, for=10.0.0.2",
-            ),
+            ("forwarded", "for=198.51.100.7;proto=https, for=10.0.0.2"),
             ("x-forwarded-for", "203.0.113.1"),
             ("x-real-ip", "203.0.113.2"),
         ]);
