@@ -2,6 +2,7 @@
 //!
 //! Powered by [`url-sanitize-core`](https://github.com/antonio-orionus/url-sanitize).
 
+pub mod client_ip;
 pub mod logging;
 pub mod map;
 pub mod routes;
