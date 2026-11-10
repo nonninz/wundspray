@@ -31,7 +31,12 @@ async fn main() {
 
     info!(%addr, "wundspray listening");
 
-    axum::serve(listener, router).await.unwrap_or_else(|err| {
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap_or_else(|err| {
         tracing::error!(error = %err, "server error");
         std::process::exit(1);
     });
