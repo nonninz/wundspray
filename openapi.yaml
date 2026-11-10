@@ -23,7 +23,7 @@ servers:
     description: Local default
 
 tags:
-  - name: sanitize
+  - name: clean
   - name: health
 
 paths:
@@ -42,11 +42,11 @@ paths:
               example:
                 status: ok
 
-  /sanitize:
+  /clean:
     post:
-      tags: [sanitize]
-      operationId: sanitizeUrl
-      summary: Sanitize a URL
+      tags: [clean]
+      operationId: cleanUrl
+      summary: Clean a URL
       description: |
         Accepts a URL, strips tracking / referral-marketing parameters, and
         unwraps known tracking redirectors. Returns a stable snake_case
@@ -71,7 +71,7 @@ paths:
                   url: https://www.google.com/url?q=https%3A%2F%2Fexample.org%2Fpage&sa=U
       responses:
         "200":
-          description: Sanitization result
+          description: Cleaning result
           content:
             application/json:
               schema:
@@ -116,6 +116,42 @@ paths:
                   value:
                     error: invalid_json
                     message: Failed to parse the request body as JSON
+
+  /sanitize:
+    post:
+      tags: [clean]
+      operationId: sanitizeUrlDeprecated
+      deprecated: true
+      summary: Deprecated alias for `/clean`
+      description: |
+        Permanently redirects to `POST /clean` with status **308** (method and
+        body are preserved for clients that follow redirects).
+
+        Response includes `Location: /clean`, `Deprecation: true`, and a
+        `Warning` header. This path will be removed in a future release;
+        migrate clients to `POST /clean`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SanitizeRequest"
+      responses:
+        "308":
+          description: Permanent redirect to `/clean`
+          headers:
+            Location:
+              schema:
+                type: string
+                const: /clean
+            Deprecation:
+              schema:
+                type: string
+                const: "true"
+            Warning:
+              schema:
+                type: string
+                description: Deprecation notice (RFC 7234 warn-code 299)
 
 components:
   schemas:
