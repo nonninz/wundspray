@@ -236,7 +236,10 @@ mod tests {
         let peer_addr = peer("203.0.113.50", 443);
         let hdrs = headers(&[("x-forwarded-for", "198.51.100.1")]);
         let resolved = resolve_client_ip(peer_addr, &hdrs, &[]);
-        assert_eq!(resolved.client_ip, IpAddr::from_str("203.0.113.50").unwrap());
+        assert_eq!(
+            resolved.client_ip,
+            IpAddr::from_str("203.0.113.50").unwrap()
+        );
         assert!(!resolved.peer_trusted);
         assert_eq!(resolved.source, ClientIpSource::Peer);
     }
@@ -250,7 +253,10 @@ mod tests {
             ("x-real-ip", "198.51.100.2"),
         ]);
         let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(resolved.client_ip, IpAddr::from_str("203.0.113.50").unwrap());
+        assert_eq!(
+            resolved.client_ip,
+            IpAddr::from_str("203.0.113.50").unwrap()
+        );
         assert!(!resolved.peer_trusted);
         assert_eq!(resolved.source, ClientIpSource::Peer);
     }
@@ -262,7 +268,10 @@ mod tests {
         // client, edge, ingress — strip trailing trusted → client
         let hdrs = headers(&[("x-forwarded-for", "198.51.100.9, 10.0.0.2, 192.168.1.3")]);
         let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(resolved.client_ip, IpAddr::from_str("198.51.100.9").unwrap());
+        assert_eq!(
+            resolved.client_ip,
+            IpAddr::from_str("198.51.100.9").unwrap()
+        );
         assert!(resolved.peer_trusted);
         assert_eq!(resolved.source, ClientIpSource::XForwardedFor);
     }
@@ -273,7 +282,10 @@ mod tests {
         let peer_addr = peer("10.0.0.5", 8080);
         let hdrs = headers(&[("x-real-ip", "198.51.100.42")]);
         let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(resolved.client_ip, IpAddr::from_str("198.51.100.42").unwrap());
+        assert_eq!(
+            resolved.client_ip,
+            IpAddr::from_str("198.51.100.42").unwrap()
+        );
         assert!(resolved.peer_trusted);
         assert_eq!(resolved.source, ClientIpSource::XRealIp);
     }
@@ -288,7 +300,10 @@ mod tests {
             ("x-real-ip", "203.0.113.2"),
         ]);
         let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(resolved.client_ip, IpAddr::from_str("198.51.100.7").unwrap());
+        assert_eq!(
+            resolved.client_ip,
+            IpAddr::from_str("198.51.100.7").unwrap()
+        );
         assert!(resolved.peer_trusted);
         assert_eq!(resolved.source, ClientIpSource::Forwarded);
     }
