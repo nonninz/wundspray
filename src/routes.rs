@@ -1,7 +1,7 @@
 //! HTTP routes for wundspray.
 
 use std::net::SocketAddr;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use std::time::Instant;
 
 use axum::extract::{ConnectInfo, State};
@@ -22,6 +22,30 @@ use crate::sanitize::sanitize;
 #[derive(Clone)]
 pub struct AppState {
     pub sanitizer: Arc<Sanitizer>,
+    pub trusted_proxies: Arc<[IpNet]>,
+}
+
+impl AppState {
+    /// Build state with `TRUSTED_PROXIES` loaded from the environment.
+    pub fn new(sanitizer: Arc<Sanitizer>) -> Self {
+        Self {
+            sanitizer,
+            trusted_proxies: Arc::from(load_trusted_proxies_from_env()),
+        }
+    }
+}
+
+fn load_trusted_proxies_from_env() -> Vec<IpNet> {
+    match std::env::var("TRUSTED_PROXIES") {
+        Ok(raw) => match parse_trusted_proxies(&raw) {
+            Ok(nets) => nets,
+            Err(err) => {
+                warn!(error = %err, "invalid TRUSTED_PROXIES; treating as empty");
+                Vec::new()
+            }
+        },
+        Err(_) => Vec::new(),
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,23 +62,6 @@ pub struct HealthResponse {
 pub struct ErrorBody {
     pub error: &'static str,
     pub message: String,
-}
-
-static TRUSTED_PROXIES: OnceLock<Vec<IpNet>> = OnceLock::new();
-
-fn trusted_proxies() -> &'static [IpNet] {
-    TRUSTED_PROXIES
-        .get_or_init(|| match std::env::var("TRUSTED_PROXIES") {
-            Ok(raw) => match parse_trusted_proxies(&raw) {
-                Ok(nets) => nets,
-                Err(err) => {
-                    warn!(error = %err, "invalid TRUSTED_PROXIES; treating as empty");
-                    Vec::new()
-                }
-            },
-            Err(_) => Vec::new(),
-        })
-        .as_slice()
 }
 
 pub fn app(state: AppState) -> Router {
@@ -76,7 +83,7 @@ async fn sanitize_handler(
 ) -> Response {
     let started = Instant::now();
     let request_id = resolve_request_id(&headers);
-    let client_ip = resolve_client_ip(peer, &headers, trusted_proxies());
+    let client_ip = resolve_client_ip(peer, &headers, &state.trusted_proxies);
     debug!(peer_addr = %peer, "sanitize peer");
 
     let Json(req) = match payload {

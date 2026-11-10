@@ -19,7 +19,7 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let router = app(AppState { sanitizer });
+    let router = app(AppState::new(sanitizer));
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     let listener = tokio::net::TcpListener::bind(addr)
