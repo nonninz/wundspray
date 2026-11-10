@@ -1,4 +1,4 @@
-.PHONY: fmt fmt-check lint test build check
+.PHONY: fmt fmt-check lint test build check sync-catalog
 
 fmt:
 	cargo fmt
@@ -16,3 +16,8 @@ build:
 	cargo build --release
 
 check: fmt-check lint test
+
+# Usage: make sync-catalog VERSION=vX.Y.Z
+sync-catalog:
+	@test -n "$(VERSION)" || (echo "usage: make sync-catalog VERSION=vX.Y.Z" >&2; exit 2)
+	./scripts/sync-catalog.sh "$(VERSION)"
