@@ -1,0 +1,89 @@
+name: catalog-sync
+
+on:
+  schedule:
+    # Weekly Monday 06:17 UTC
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: catalog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: sync url-sanitize catalog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read pinned crate version
+        id: pin
+        run: |
+          pinned="$(sed -nE 's/^url-sanitize-core = "([^"]+)"/\1/p' Cargo.toml | head -n1)"
+          if [ -z "$pinned" ]; then
+            echo "Could not read url-sanitize-core from Cargo.toml" >&2
+            exit 1
+          fi
+          echo "version=$pinned" >> "$GITHUB_OUTPUT"
+
+      - name: Read newest published crates.io version
+        id: crates
+        run: |
+          newest="$(curl -fsSL \
+            -H 'User-Agent: wundspray-catalog-sync (github.com/nonninz/wundspray)' \
+            https://crates.io/api/v1/crates/url-sanitize-core \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["crate"]["newest_version"])')"
+          echo "version=$newest" >> "$GITHUB_OUTPUT"
+          echo "Pinned=${{ steps.pin.outputs.version }} newest=$newest"
+
+      - name: Decide whether sync is needed
+        id: need
+        run: |
+          if [ "${{ steps.pin.outputs.version }}" = "${{ steps.crates.outputs.version }}" ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Rust toolchain
+        if: steps.need.outputs.needed == 'true'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        if: steps.need.outputs.needed == 'true'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run catalog sync
+        if: steps.need.outputs.needed == 'true'
+        run: make sync-catalog VERSION=v${{ steps.crates.outputs.version }}
+
+      - name: Verify
+        if: steps.need.outputs.needed == 'true'
+        run: make check
+
+      - name: Open pull request
+        if: steps.need.outputs.needed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/catalog-sync-v${{ steps.crates.outputs.version }}
+          delete-branch: true
+          title: "chore(catalog): sync url-sanitize-core ${{ steps.crates.outputs.version }}"
+          commit-message: "chore(catalog): sync url-sanitize-core ${{ steps.crates.outputs.version }}"
+          body: |
+            Automated sync from published crates.io `url-sanitize-core ${{ steps.crates.outputs.version }}`.
+
+            Updates as one unit:
+            - `Cargo.toml` / lockfile `url-sanitize-core`
+            - `catalog/catalog.json`
+            - `catalog/PIN.txt`
+
+            Does **not** modify `catalog/overlay.json`.
