@@ -3,7 +3,7 @@
 use serde::Serialize;
 use url_sanitize_core::{MatchedRule, SanitizeResult};
 
-/// Stable JSON response for `POST /sanitize`.
+/// Stable JSON response for `POST /clean`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SanitizeResponse {
     pub input: String,

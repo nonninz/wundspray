@@ -28,14 +28,14 @@ fn peer(addr: &str) -> SocketAddr {
     addr.parse().expect("socket addr")
 }
 
-fn sanitize_request(
+fn clean_request(
     peer_addr: SocketAddr,
     body: String,
     extra_headers: &[(&str, &str)],
 ) -> Request<Body> {
     let mut builder = Request::builder()
         .method("POST")
-        .uri("/sanitize")
+        .uri("/clean")
         .header("content-type", "application/json");
     for (name, value) in extra_headers {
         builder = builder.header(*name, *value);
@@ -73,9 +73,9 @@ async fn health_ok() {
 }
 
 #[tokio::test]
-async fn sanitize_strips_tracking() {
+async fn clean_strips_tracking() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             json!({
                 "url": "https://example.com/a?id=1&utm_source=x&utm_medium=email"
@@ -101,9 +101,9 @@ async fn sanitize_strips_tracking() {
 }
 
 #[tokio::test]
-async fn sanitize_unwraps_redirect() {
+async fn clean_unwraps_redirect() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             json!({
                 "url": "https://www.google.com/url?q=https%3A%2F%2Fexample.org%2Fpage&sa=U"
@@ -125,9 +125,9 @@ async fn sanitize_unwraps_redirect() {
 }
 
 #[tokio::test]
-async fn sanitize_rejects_empty_url() {
+async fn clean_rejects_empty_url() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             json!({ "url": "   " }).to_string(),
             &[],
@@ -141,9 +141,9 @@ async fn sanitize_rejects_empty_url() {
 }
 
 #[tokio::test]
-async fn sanitize_rejects_invalid_json() {
+async fn clean_rejects_invalid_json() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             "{not-json".into(),
             &[],
@@ -157,9 +157,9 @@ async fn sanitize_rejects_invalid_json() {
 }
 
 #[tokio::test]
-async fn sanitize_rejects_missing_url_field() {
+async fn clean_rejects_missing_url_field() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             json!({ "link": "https://example.com" }).to_string(),
             &[],
@@ -173,10 +173,47 @@ async fn sanitize_rejects_missing_url_field() {
 }
 
 #[tokio::test]
-async fn sanitize_ignores_spoofed_xff_without_trusted_proxies() {
+async fn sanitize_redirects_permanently_to_clean() {
+    let response = test_app()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/sanitize")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({
+                        "url": "https://example.com/?utm_source=x"
+                    })
+                    .to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::PERMANENT_REDIRECT);
+    assert_eq!(
+        response
+            .headers()
+            .get("location")
+            .and_then(|v| v.to_str().ok()),
+        Some("/clean")
+    );
+    assert!(
+        response
+            .headers()
+            .get("deprecation")
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+        "Deprecation header must be present"
+    );
+}
+
+#[tokio::test]
+async fn clean_ignores_spoofed_xff_without_trusted_proxies() {
     // No trusted proxies → ConnectInfo peer wins; spoofed XFF must not break the handler.
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.50:443"),
             json!({ "url": "https://example.com/" }).to_string(),
             &[("x-forwarded-for", "198.51.100.1")],
@@ -203,7 +240,7 @@ async fn sanitize_ignores_spoofed_xff_without_trusted_proxies() {
 }
 
 #[tokio::test]
-async fn sanitize_trusted_proxy_xff_resolves_client() {
+async fn clean_trusted_proxy_xff_resolves_client() {
     let trusted = parse_trusted_proxies("10.0.0.0/8").unwrap();
     let peer_addr = peer("10.0.0.5:8080");
     let headers = {
@@ -218,7 +255,7 @@ async fn sanitize_trusted_proxy_xff_resolves_client() {
     assert_eq!(resolved, IpAddr::from([198, 51, 100, 9]));
 
     let response = test_app_with_proxies(&trusted)
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer_addr,
             json!({ "url": "https://example.com/" }).to_string(),
             &[("x-forwarded-for", "198.51.100.9, 10.0.0.2")],
@@ -231,9 +268,9 @@ async fn sanitize_trusted_proxy_xff_resolves_client() {
 }
 
 #[tokio::test]
-async fn sanitize_echoes_inbound_request_id() {
+async fn clean_echoes_inbound_request_id() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             json!({ "url": "https://example.com/" }).to_string(),
             &[("x-request-id", "req-from-ingress-1")],
@@ -249,9 +286,9 @@ async fn sanitize_echoes_inbound_request_id() {
 }
 
 #[tokio::test]
-async fn sanitize_generates_request_id_when_missing() {
+async fn clean_generates_request_id_when_missing() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             json!({ "url": "https://example.com/" }).to_string(),
             &[],
@@ -270,9 +307,9 @@ async fn sanitize_generates_request_id_when_missing() {
 }
 
 #[tokio::test]
-async fn sanitize_echoes_request_id_on_error() {
+async fn clean_echoes_request_id_on_error() {
     let response = test_app()
-        .oneshot(sanitize_request(
+        .oneshot(clean_request(
             peer("203.0.113.10:12345"),
             json!({ "url": "   " }).to_string(),
             &[("x-request-id", "err-corr-9")],

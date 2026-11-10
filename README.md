@@ -47,7 +47,7 @@ OpenAPI 3.1 contract: [`openapi.yaml`](openapi.yaml).
 { "status": "ok" }
 ```
 
-### `POST /sanitize`
+### `POST /clean`
 
 Request:
 
@@ -84,6 +84,13 @@ Errors (`400`):
 Matched rules / redirect `via` are **not** returned. Enable `LOG_LEVEL=debug`
 to see them in process logs.
 
+### `POST /sanitize` (deprecated)
+
+Alias that returns **308 Permanent Redirect** to `/clean` (method and body
+preserved for clients that follow redirects), with `Location: /clean`,
+`Deprecation: true`, and a `Warning` header. Will be removed in a future
+release — migrate to `POST /clean`.
+
 ## Behaviour defaults
 
 | Option | wundspray | upstream url-sanitize default |
@@ -106,7 +113,7 @@ cargo run
 
 ```sh
 curl -s localhost:8080/health
-curl -s localhost:8080/sanitize \
+curl -s localhost:8080/clean \
   -H 'content-type: application/json' \
   -d '{"url":"https://example.com/?utm_source=x"}'
 ```
@@ -121,8 +128,9 @@ curl -s localhost:8080/sanitize \
 
 When the service sits behind an ingress that terminates TLS, set `TRUSTED_PROXIES` to that proxy’s addresses (for example `10.0.0.0/8`). Only then are forwarding headers used: trailing trusted hops are stripped and the rightmost remaining address is treated as the client.
 
-At `info`, each `/sanitize` logs action / changed / latency, plus `client_ip` and `request_id`.  
-At `debug`+, also logs `peer_addr`, input/output, stripped params, matched rules, and `via`.
+At `info`, each `/clean` logs action / changed / latency, plus `client_ip` and `request_id`.  
+At `debug`+, also logs `peer_addr`, input/output, stripped params, matched rules, and `via`.  
+Calls to deprecated `/sanitize` are logged (warn) with a 308 redirect to `/clean`.
 
 `X-Request-Id` is echoed when present (non-empty); otherwise a UUID v4 is generated and returned on the response.
 

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use axum::extract::{ConnectInfo, State};
-use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
+use axum::http::{header, HeaderMap, HeaderName, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -67,7 +67,8 @@ pub struct ErrorBody {
 pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health))
-        .route("/sanitize", post(sanitize_handler))
+        .route("/clean", post(clean_handler))
+        .route("/sanitize", post(sanitize_deprecated))
         .with_state(state)
 }
 
@@ -75,7 +76,30 @@ async fn health() -> Json<HealthResponse> {
     Json(HealthResponse { status: "ok" })
 }
 
-async fn sanitize_handler(
+/// Deprecated: 308 Permanent Redirect to `/clean` (preserves method/body).
+async fn sanitize_deprecated() -> Response {
+    warn!(
+        method = "POST",
+        path = "/sanitize",
+        status = 308,
+        location = "/clean",
+        "deprecated /sanitize used; use POST /clean"
+    );
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::LOCATION, HeaderValue::from_static("/clean"));
+    headers.insert("deprecation", HeaderValue::from_static("true"));
+    headers.insert(
+        header::WARNING,
+        HeaderValue::from_static(
+            "299 - \"POST /sanitize is deprecated; use POST /clean. Will be removed in a future release.\"",
+        ),
+    );
+
+    (StatusCode::PERMANENT_REDIRECT, headers).into_response()
+}
+
+async fn clean_handler(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
@@ -84,20 +108,20 @@ async fn sanitize_handler(
     let started = Instant::now();
     let request_id = resolve_request_id(&headers);
     let client_ip = resolve_client_ip(peer, &headers, &state.trusted_proxies);
-    debug!(peer_addr = %peer, "sanitize peer");
+    debug!(peer_addr = %peer, "clean peer");
 
     let Json(req) = match payload {
         Ok(json) => json,
         Err(err) => {
             info!(
                 method = "POST",
-                path = "/sanitize",
+                path = "/clean",
                 status = 400,
                 error = "invalid_json",
                 %client_ip,
                 request_id = %request_id,
                 latency_ms = started.elapsed().as_millis() as u64,
-                "sanitize rejected"
+                "clean rejected"
             );
             return with_request_id(
                 error_response(StatusCode::BAD_REQUEST, "invalid_json", err.body_text()),
@@ -110,13 +134,13 @@ async fn sanitize_handler(
     if url.is_empty() {
         info!(
             method = "POST",
-            path = "/sanitize",
+            path = "/clean",
             status = 400,
             error = "invalid_url",
             %client_ip,
             request_id = %request_id,
             latency_ms = started.elapsed().as_millis() as u64,
-            "sanitize rejected"
+            "clean rejected"
         );
         return with_request_id(
             error_response(
@@ -134,7 +158,7 @@ async fn sanitize_handler(
 
     info!(
         method = "POST",
-        path = "/sanitize",
+        path = "/clean",
         status = 200,
         action = action_str(response.action),
         changed = response.changed,
@@ -142,7 +166,7 @@ async fn sanitize_handler(
         %client_ip,
         request_id = %request_id,
         latency_ms,
-        "sanitize"
+        "clean"
     );
 
     if tracing::enabled!(tracing::Level::DEBUG) {
@@ -152,7 +176,7 @@ async fn sanitize_handler(
             stripped_params = ?response.stripped_params,
             matched_rules = ?mapped.details.matched_rules,
             via = ?mapped.details.via,
-            "sanitize details"
+            "clean details"
         );
     }
 
