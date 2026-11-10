@@ -1,4 +1,4 @@
-.PHONY: fmt fmt-check lint test build check sync-catalog
+.PHONY: fmt fmt-check lint test build check sync-catalog check-catalog-pin
 
 fmt:
 	cargo fmt
@@ -15,7 +15,10 @@ test:
 build:
 	cargo build --release
 
-check: fmt-check lint test
+check-catalog-pin:
+	./scripts/check-catalog-pin.sh
+
+check: check-catalog-pin fmt-check lint test
 
 # Usage: make sync-catalog VERSION=vX.Y.Z
 sync-catalog:
