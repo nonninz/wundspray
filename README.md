@@ -29,10 +29,22 @@ distributed artifact is **MIT AND LGPL-3.0-only AND MPL-2.0**.
 
 - Attribution + how to rebuild with modified rules: [`NOTICE`](NOTICE)
 - Catalog pin / hashes: [`catalog/PIN.txt`](catalog/PIN.txt)
+- Local overlay (survives sync): [`catalog/overlay.json`](catalog/overlay.json)
 - Image ships the same texts under `/licenses/`
 
 AdGuard rules are **not** included (GPL-3.0 upstream data; opt-in in
 url-sanitize, out of scope here).
+
+New upstream rules arrive as a new **`url-sanitize-core` crates.io release**.
+Refresh crate + vendored catalog together (never Dependabot alone):
+
+```sh
+make sync-catalog VERSION=vX.Y.Z   # or merge the weekly catalog-sync bot PR
+make check
+```
+
+`catalog/overlay.json` holds local hotfixes (Instagram rotating 4-letter share
+tokens) and is **not** modified by sync.
 
 This project is not affiliated with or endorsed by antonio-orionus, ClearURLs,
 Brave, Mozilla, or AdGuard.
@@ -181,10 +193,12 @@ First-time GHCR notes:
 ## Development
 
 ```sh
-make fmt          # rustfmt
-make lint         # clippy -D warnings
+make fmt                 # rustfmt
+make lint                # clippy -D warnings
 make test
-make check        # fmt-check + lint + test
+make check-catalog-pin   # Cargo.toml url-sanitize-core == catalog/PIN.txt
+make check               # pin check + fmt-check + lint + test
+make sync-catalog VERSION=vX.Y.Z
 ```
 
 ## License
