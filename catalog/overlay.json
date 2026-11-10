@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "kind": "keep-param",
+      "source": "custom",
+      "provider": "wundspray-instagram-keep",
+      "urlPattern": "^https?:\\/\\/(?:[a-z0-9-]+\\.)*?instagram\\.com",
+      "paramPattern": "next|page|img_index|story_media_id"
+    },
+    {
+      "kind": "strip-param",
+      "source": "custom",
+      "provider": "wundspray-instagram-random4",
+      "urlPattern": "^https?:\\/\\/(?:[a-z0-9-]+\\.)*?instagram\\.com",
+      "paramPattern": "[a-zA-Z]{4}",
+      "valuePattern": "[A-Za-z0-9+/_-]{10,}={0,2}"
+    }
+  ]
+}
