@@ -67,7 +67,8 @@ pub struct ErrorBody {
 pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health))
-        .route("/sanitize", post(sanitize_handler))
+        .route("/clean", post(clean_handler))
+        .route("/sanitize", post(clean_handler))
         .with_state(state)
 }
 
@@ -75,7 +76,7 @@ async fn health() -> Json<HealthResponse> {
     Json(HealthResponse { status: "ok" })
 }
 
-async fn sanitize_handler(
+async fn clean_handler(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
@@ -91,13 +92,13 @@ async fn sanitize_handler(
         Err(err) => {
             info!(
                 method = "POST",
-                path = "/sanitize",
+                path = "/clean",
                 status = 400,
                 error = "invalid_json",
                 %client_ip,
                 request_id = %request_id,
                 latency_ms = started.elapsed().as_millis() as u64,
-                "sanitize rejected"
+                "clean rejected"
             );
             return with_request_id(
                 error_response(StatusCode::BAD_REQUEST, "invalid_json", err.body_text()),
@@ -110,13 +111,13 @@ async fn sanitize_handler(
     if url.is_empty() {
         info!(
             method = "POST",
-            path = "/sanitize",
+            path = "/clean",
             status = 400,
             error = "invalid_url",
             %client_ip,
             request_id = %request_id,
             latency_ms = started.elapsed().as_millis() as u64,
-            "sanitize rejected"
+            "clean rejected"
         );
         return with_request_id(
             error_response(
@@ -134,7 +135,7 @@ async fn sanitize_handler(
 
     info!(
         method = "POST",
-        path = "/sanitize",
+        path = "/clean",
         status = 200,
         action = action_str(response.action),
         changed = response.changed,
@@ -142,7 +143,7 @@ async fn sanitize_handler(
         %client_ip,
         request_id = %request_id,
         latency_ms,
-        "sanitize"
+        "clean"
     );
 
     if tracing::enabled!(tracing::Level::DEBUG) {
@@ -152,7 +153,7 @@ async fn sanitize_handler(
             stripped_params = ?response.stripped_params,
             matched_rules = ?mapped.details.matched_rules,
             via = ?mapped.details.via,
-            "sanitize details"
+            "clean details"
         );
     }
 
