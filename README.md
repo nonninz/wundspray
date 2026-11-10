@@ -128,8 +128,10 @@ curl -s localhost:8080/clean \
 
 When the service sits behind an ingress that terminates TLS, set `TRUSTED_PROXIES` to that proxy’s addresses (for example `10.0.0.0/8`). Only then are forwarding headers used: trailing trusted hops are stripped and the rightmost remaining address is treated as the client.
 
+On startup, an `info` banner logs version, effective log filter, listen address, and the parsed `TRUSTED_PROXIES` list (`headers_trusted=false` when empty).
+
 At `info`, each `/clean` logs action / changed / latency, plus `client_ip` and `request_id`.  
-At `debug`+, also logs `peer_addr`, input/output, stripped params, matched rules, and `via`.  
+At `debug`+, a preceding peer line logs `peer_addr`, `peer_trusted`, `ip_source` (`peer` / `forwarded` / `xff` / `x-real-ip`), and raw forwarding headers when present; sanitize details also log input/output, stripped params, matched rules, and `via`.  
 Calls to deprecated `/sanitize` are logged (warn) with a 308 redirect to `/clean`.
 
 `X-Request-Id` is echoed when present (non-empty); otherwise a UUID v4 is generated and returned on the response.

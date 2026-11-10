@@ -15,7 +15,7 @@ use tracing::{debug, info, warn};
 use url_sanitize_core::Sanitizer;
 use uuid::Uuid;
 
-use crate::client_ip::{parse_trusted_proxies, resolve_client_ip};
+use crate::client_ip::{parse_trusted_proxies, resolve_client_ip, ClientIpResolution};
 use crate::map::{map_result, Action};
 use crate::sanitize::sanitize;
 
@@ -107,8 +107,9 @@ async fn clean_handler(
 ) -> Response {
     let started = Instant::now();
     let request_id = resolve_request_id(&headers);
-    let client_ip = resolve_client_ip(peer, &headers, &state.trusted_proxies);
-    debug!(peer_addr = %peer, "clean peer");
+    let resolved = resolve_client_ip(peer, &headers, &state.trusted_proxies);
+    let client_ip = resolved.client_ip;
+    log_clean_peer(peer, &resolved, &headers);
 
     let Json(req) = match payload {
         Ok(json) => json,
@@ -184,6 +185,25 @@ async fn clean_handler(
         (StatusCode::OK, Json(mapped.response)).into_response(),
         &request_id,
     )
+}
+
+fn log_clean_peer(peer: SocketAddr, resolved: &ClientIpResolution, headers: &HeaderMap) {
+    let forwarded = header_str(headers, "forwarded");
+    let x_forwarded_for = header_str(headers, "x-forwarded-for");
+    let x_real_ip = header_str(headers, "x-real-ip");
+    debug!(
+        peer_addr = %peer,
+        peer_trusted = resolved.peer_trusted,
+        ip_source = resolved.source.as_str(),
+        forwarded,
+        x_forwarded_for,
+        x_real_ip,
+        "clean peer"
+    );
+}
+
+fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
+    headers.get(name).and_then(|v| v.to_str().ok())
 }
 
 fn resolve_request_id(headers: &HeaderMap) -> String {

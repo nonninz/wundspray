@@ -36,28 +36,82 @@ fn is_trusted(ip: IpAddr, trusted: &[IpNet]) -> bool {
     trusted.iter().any(|net| net.contains(&ip))
 }
 
+/// Which input produced the resolved client IP.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClientIpSource {
+    Peer,
+    Forwarded,
+    XForwardedFor,
+    XRealIp,
+}
+
+impl ClientIpSource {
+    /// Stable string for structured logs: `peer` / `forwarded` / `xff` / `x-real-ip`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Peer => "peer",
+            Self::Forwarded => "forwarded",
+            Self::XForwardedFor => "xff",
+            Self::XRealIp => "x-real-ip",
+        }
+    }
+}
+
+/// Result of client-IP resolution, including diagnostics for DEBUG logs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ClientIpResolution {
+    pub client_ip: IpAddr,
+    pub peer_trusted: bool,
+    pub source: ClientIpSource,
+}
+
 /// Resolve the requestor IP from the TCP peer and optional proxy headers.
 ///
 /// Forwarding headers are only consulted when `peer` is in `trusted`.
 /// Prefer `Forwarded`, then `X-Forwarded-For` (strip trailing trusted hops,
 /// take the rightmost remaining address), then `X-Real-IP`, else the peer IP.
-pub fn resolve_client_ip(peer: SocketAddr, headers: &HeaderMap, trusted: &[IpNet]) -> IpAddr {
+pub fn resolve_client_ip(
+    peer: SocketAddr,
+    headers: &HeaderMap,
+    trusted: &[IpNet],
+) -> ClientIpResolution {
     let peer_ip = peer.ip();
-    if trusted.is_empty() || !is_trusted(peer_ip, trusted) {
-        return peer_ip;
+    let peer_trusted = !trusted.is_empty() && is_trusted(peer_ip, trusted);
+    if !peer_trusted {
+        return ClientIpResolution {
+            client_ip: peer_ip,
+            peer_trusted: false,
+            source: ClientIpSource::Peer,
+        };
     }
 
     if let Some(ip) = client_from_forwarded(headers, trusted) {
-        return ip;
+        return ClientIpResolution {
+            client_ip: ip,
+            peer_trusted: true,
+            source: ClientIpSource::Forwarded,
+        };
     }
     if let Some(ip) = client_from_xff(headers, trusted) {
-        return ip;
+        return ClientIpResolution {
+            client_ip: ip,
+            peer_trusted: true,
+            source: ClientIpSource::XForwardedFor,
+        };
     }
     if let Some(ip) = client_from_x_real_ip(headers) {
-        return ip;
+        return ClientIpResolution {
+            client_ip: ip,
+            peer_trusted: true,
+            source: ClientIpSource::XRealIp,
+        };
     }
 
-    peer_ip
+    ClientIpResolution {
+        client_ip: peer_ip,
+        peer_trusted: true,
+        source: ClientIpSource::Peer,
+    }
 }
 
 fn client_from_forwarded(headers: &HeaderMap, trusted: &[IpNet]) -> Option<IpAddr> {
@@ -181,8 +235,10 @@ mod tests {
     fn empty_trusted_ignores_spoofed_xff() {
         let peer_addr = peer("203.0.113.50", 443);
         let hdrs = headers(&[("x-forwarded-for", "198.51.100.1")]);
-        let ip = resolve_client_ip(peer_addr, &hdrs, &[]);
-        assert_eq!(ip, IpAddr::from_str("203.0.113.50").unwrap());
+        let resolved = resolve_client_ip(peer_addr, &hdrs, &[]);
+        assert_eq!(resolved.client_ip, IpAddr::from_str("203.0.113.50").unwrap());
+        assert!(!resolved.peer_trusted);
+        assert_eq!(resolved.source, ClientIpSource::Peer);
     }
 
     #[test]
@@ -193,8 +249,10 @@ mod tests {
             ("x-forwarded-for", "198.51.100.1"),
             ("x-real-ip", "198.51.100.2"),
         ]);
-        let ip = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(ip, IpAddr::from_str("203.0.113.50").unwrap());
+        let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
+        assert_eq!(resolved.client_ip, IpAddr::from_str("203.0.113.50").unwrap());
+        assert!(!resolved.peer_trusted);
+        assert_eq!(resolved.source, ClientIpSource::Peer);
     }
 
     #[test]
@@ -203,8 +261,10 @@ mod tests {
         let peer_addr = peer("10.0.0.5", 8080);
         // client, edge, ingress — strip trailing trusted → client
         let hdrs = headers(&[("x-forwarded-for", "198.51.100.9, 10.0.0.2, 192.168.1.3")]);
-        let ip = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(ip, IpAddr::from_str("198.51.100.9").unwrap());
+        let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
+        assert_eq!(resolved.client_ip, IpAddr::from_str("198.51.100.9").unwrap());
+        assert!(resolved.peer_trusted);
+        assert_eq!(resolved.source, ClientIpSource::XForwardedFor);
     }
 
     #[test]
@@ -212,8 +272,10 @@ mod tests {
         let trusted = parse_trusted_proxies("10.0.0.0/8").unwrap();
         let peer_addr = peer("10.0.0.5", 8080);
         let hdrs = headers(&[("x-real-ip", "198.51.100.42")]);
-        let ip = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(ip, IpAddr::from_str("198.51.100.42").unwrap());
+        let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
+        assert_eq!(resolved.client_ip, IpAddr::from_str("198.51.100.42").unwrap());
+        assert!(resolved.peer_trusted);
+        assert_eq!(resolved.source, ClientIpSource::XRealIp);
     }
 
     #[test]
@@ -225,8 +287,10 @@ mod tests {
             ("x-forwarded-for", "203.0.113.1"),
             ("x-real-ip", "203.0.113.2"),
         ]);
-        let ip = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(ip, IpAddr::from_str("198.51.100.7").unwrap());
+        let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
+        assert_eq!(resolved.client_ip, IpAddr::from_str("198.51.100.7").unwrap());
+        assert!(resolved.peer_trusted);
+        assert_eq!(resolved.source, ClientIpSource::Forwarded);
     }
 
     #[test]
@@ -234,7 +298,9 @@ mod tests {
         let trusted = parse_trusted_proxies("fc00::/7").unwrap();
         let peer_addr: SocketAddr = "[fc00::1]:443".parse().unwrap();
         let hdrs = headers(&[("forwarded", r#"for="[2001:db8::9]";proto=https"#)]);
-        let ip = resolve_client_ip(peer_addr, &hdrs, &trusted);
-        assert_eq!(ip, IpAddr::from_str("2001:db8::9").unwrap());
+        let resolved = resolve_client_ip(peer_addr, &hdrs, &trusted);
+        assert_eq!(resolved.client_ip, IpAddr::from_str("2001:db8::9").unwrap());
+        assert!(resolved.peer_trusted);
+        assert_eq!(resolved.source, ClientIpSource::Forwarded);
     }
 }

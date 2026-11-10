@@ -7,7 +7,7 @@ use wundspray::sanitize::shared_sanitizer;
 
 #[tokio::main]
 async fn main() {
-    logging::init();
+    let filter = logging::init();
 
     let port: u16 = std::env::var("PORT")
         .ok()
@@ -19,8 +19,26 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let router = app(AppState::new(sanitizer));
+    let state = AppState::new(sanitizer);
+    let trusted_proxy_count = state.trusted_proxies.len();
+    let trusted_proxies = state
+        .trusted_proxies
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let router = app(state);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
+
+    info!(
+        version = env!("CARGO_PKG_VERSION"),
+        filter = %filter,
+        %addr,
+        trusted_proxy_count,
+        trusted_proxies = %trusted_proxies,
+        headers_trusted = trusted_proxy_count > 0,
+        "wundspray starting"
+    );
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
