@@ -1,23 +1,51 @@
 //! HTTP routes for wundspray.
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 
-use axum::extract::State;
-use axum::http::StatusCode;
+use axum::extract::{ConnectInfo, State};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use url_sanitize_core::Sanitizer;
+use uuid::Uuid;
 
+use crate::client_ip::{parse_trusted_proxies, resolve_client_ip};
 use crate::map::{map_result, Action};
 use crate::sanitize::sanitize;
 
 #[derive(Clone)]
 pub struct AppState {
     pub sanitizer: Arc<Sanitizer>,
+    pub trusted_proxies: Arc<[IpNet]>,
+}
+
+impl AppState {
+    /// Build state with `TRUSTED_PROXIES` loaded from the environment.
+    pub fn new(sanitizer: Arc<Sanitizer>) -> Self {
+        Self {
+            sanitizer,
+            trusted_proxies: Arc::from(load_trusted_proxies_from_env()),
+        }
+    }
+}
+
+fn load_trusted_proxies_from_env() -> Vec<IpNet> {
+    match std::env::var("TRUSTED_PROXIES") {
+        Ok(raw) => match parse_trusted_proxies(&raw) {
+            Ok(nets) => nets,
+            Err(err) => {
+                warn!(error = %err, "invalid TRUSTED_PROXIES; treating as empty");
+                Vec::new()
+            }
+        },
+        Err(_) => Vec::new(),
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,9 +77,14 @@ async fn health() -> Json<HealthResponse> {
 
 async fn sanitize_handler(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     payload: Result<Json<SanitizeRequest>, axum::extract::rejection::JsonRejection>,
 ) -> Response {
     let started = Instant::now();
+    let request_id = resolve_request_id(&headers);
+    let client_ip = resolve_client_ip(peer, &headers, &state.trusted_proxies);
+    debug!(peer_addr = %peer, "sanitize peer");
 
     let Json(req) = match payload {
         Ok(json) => json,
@@ -61,10 +94,15 @@ async fn sanitize_handler(
                 path = "/sanitize",
                 status = 400,
                 error = "invalid_json",
+                %client_ip,
+                request_id = %request_id,
                 latency_ms = started.elapsed().as_millis() as u64,
                 "sanitize rejected"
             );
-            return error_response(StatusCode::BAD_REQUEST, "invalid_json", err.body_text());
+            return with_request_id(
+                error_response(StatusCode::BAD_REQUEST, "invalid_json", err.body_text()),
+                &request_id,
+            );
         }
     };
 
@@ -75,13 +113,18 @@ async fn sanitize_handler(
             path = "/sanitize",
             status = 400,
             error = "invalid_url",
+            %client_ip,
+            request_id = %request_id,
             latency_ms = started.elapsed().as_millis() as u64,
             "sanitize rejected"
         );
-        return error_response(
-            StatusCode::BAD_REQUEST,
-            "invalid_url",
-            "url must be a non-empty string".into(),
+        return with_request_id(
+            error_response(
+                StatusCode::BAD_REQUEST,
+                "invalid_url",
+                "url must be a non-empty string".into(),
+            ),
+            &request_id,
         );
     }
 
@@ -96,6 +139,8 @@ async fn sanitize_handler(
         action = action_str(response.action),
         changed = response.changed,
         blocked = response.blocked,
+        %client_ip,
+        request_id = %request_id,
         latency_ms,
         "sanitize"
     );
@@ -111,7 +156,29 @@ async fn sanitize_handler(
         );
     }
 
-    (StatusCode::OK, Json(mapped.response)).into_response()
+    with_request_id(
+        (StatusCode::OK, Json(mapped.response)).into_response(),
+        &request_id,
+    )
+}
+
+fn resolve_request_id(headers: &HeaderMap) -> String {
+    headers
+        .get("x-request-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_owned)
+        .unwrap_or_else(|| Uuid::new_v4().to_string())
+}
+
+fn with_request_id(mut response: Response, request_id: &str) -> Response {
+    if let Ok(value) = HeaderValue::from_str(request_id) {
+        response
+            .headers_mut()
+            .insert(HeaderName::from_static("x-request-id"), value);
+    }
+    response
 }
 
 fn action_str(action: Action) -> &'static str {

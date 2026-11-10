@@ -19,7 +19,7 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let router = app(AppState { sanitizer });
+    let router = app(AppState::new(sanitizer));
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     let listener = tokio::net::TcpListener::bind(addr)
@@ -31,7 +31,12 @@ async fn main() {
 
     info!(%addr, "wundspray listening");
 
-    axum::serve(listener, router).await.unwrap_or_else(|err| {
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap_or_else(|err| {
         tracing::error!(error = %err, "server error");
         std::process::exit(1);
     });

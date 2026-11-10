@@ -117,9 +117,14 @@ curl -s localhost:8080/sanitize \
 | --- | --- | --- |
 | `PORT` | `8080` | Listen port (`0.0.0.0`) |
 | `LOG_LEVEL` | `info` | `trace` / `debug` / `info` / `warn` / `error`, or a full `tracing` filter expression containing `=` |
+| `TRUSTED_PROXIES` | _(empty)_ | Comma-separated CIDRs (or single IPs) of ingress proxies allowed to set client-IP headers. Empty means never trust `Forwarded` / `X-Forwarded-For` / `X-Real-IP` — the TCP peer address is logged instead. |
 
-At `info`, each `/sanitize` logs action / changed / latency.  
-At `debug`+, also logs input/output, stripped params, matched rules, and `via`.
+When the service sits behind an ingress that terminates TLS, set `TRUSTED_PROXIES` to that proxy’s addresses (for example `10.0.0.0/8`). Only then are forwarding headers used: trailing trusted hops are stripped and the rightmost remaining address is treated as the client.
+
+At `info`, each `/sanitize` logs action / changed / latency, plus `client_ip` and `request_id`.  
+At `debug`+, also logs `peer_addr`, input/output, stripped params, matched rules, and `via`.
+
+`X-Request-Id` is echoed when present (non-empty); otherwise a UUID v4 is generated and returned on the response.
 
 ## Docker
 
