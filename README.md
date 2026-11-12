@@ -39,9 +39,12 @@ New upstream rules arrive as a new **`url-sanitize-core` crates.io release**.
 Refresh crate + vendored catalog together (never Dependabot alone):
 
 ```sh
-make sync-catalog VERSION=vX.Y.Z   # or merge the weekly catalog-sync bot PR
+make sync-catalog                  # newest url-sanitize-core on crates.io
+# make sync-catalog VERSION=vX.Y.Z # pin an explicit release if needed
 make check
 ```
+
+Or merge the nightly `catalog-sync` bot PR when it opens.
 
 `catalog/overlay.json` holds local hotfixes (Instagram rotating 4-letter share
 tokens) and is **not** modified by sync.
@@ -198,7 +201,7 @@ make lint                # clippy -D warnings
 make test
 make check-catalog-pin   # Cargo.toml url-sanitize-core == catalog/PIN.txt
 make check               # pin check + fmt-check + lint + test
-make sync-catalog VERSION=vX.Y.Z
+make sync-catalog                  # or VERSION=vX.Y.Z
 ```
 
 ## License

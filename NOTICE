@@ -73,7 +73,7 @@ To rebuild wundspray with unmodified or modified rule data:
 To refresh the upstream blob from a published url-sanitize release
 (crate + catalog + PIN as one unit; overlay untouched):
 
-  make sync-catalog VERSION=vX.Y.Z
+  make sync-catalog            # newest crates.io release, or VERSION=vX.Y.Z
   make check
 
 Upstream catalog provenance for the pinned tag:
