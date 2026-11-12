@@ -236,7 +236,7 @@ async fn clean_ignores_spoofed_xff_without_trusted_proxies() {
         },
         &[],
     );
-    assert_eq!(resolved, IpAddr::from([203, 0, 113, 50]));
+    assert_eq!(resolved.client_ip, IpAddr::from([203, 0, 113, 50]));
 }
 
 #[tokio::test]
@@ -252,7 +252,7 @@ async fn clean_trusted_proxy_xff_resolves_client() {
         h
     };
     let resolved = wundspray::client_ip::resolve_client_ip(peer_addr, &headers, &trusted);
-    assert_eq!(resolved, IpAddr::from([198, 51, 100, 9]));
+    assert_eq!(resolved.client_ip, IpAddr::from([198, 51, 100, 9]));
 
     let response = test_app_with_proxies(&trusted)
         .oneshot(clean_request(

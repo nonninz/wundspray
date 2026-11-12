@@ -38,8 +38,8 @@ pub fn resolve_filter(raw: Option<&str>) -> String {
 
 /// Install a compact, colored (ANSI) global subscriber.
 ///
-/// Safe to call once at process start.
-pub fn init() {
+/// Safe to call once at process start. Returns the effective filter string.
+pub fn init() -> String {
     let filter = resolve_filter(env::var("LOG_LEVEL").ok().as_deref());
 
     tracing_subscriber::fmt()
@@ -52,7 +52,7 @@ pub fn init() {
         .compact()
         .init();
 
-    tracing::debug!(filter = %filter, "logging initialized");
+    filter
 }
 
 #[cfg(test)]
