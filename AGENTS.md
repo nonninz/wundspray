@@ -15,6 +15,9 @@ checklists live under `.agents/references/`.
 - Do not invent APIs: keep `openapi.yaml` and handlers in sync.
 - Do not commit secrets, `.env`, or build artifacts.
 - Only create git commits when the user explicitly asks.
+- When opening a PR: run the Test plan yourself first (`make check`, smokes,
+  local Docker when the image path changed). Include `## Test plan` with boxes
+  **checked** for what you did; leave unchecked only items a human must still do.
 - Never bump or sync `url-sanitize-core` / `catalog/` casually — use
   `make sync-catalog` (or `VERSION=vX.Y.Z`) and keep `Cargo.toml` pin aligned
   with `catalog/PIN.txt`.
