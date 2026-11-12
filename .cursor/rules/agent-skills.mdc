@@ -1,0 +1,13 @@
+---
+description: Use installed agent-skills workflows from .agents/skills
+alwaysApply: true
+---
+
+Before non-trivial technical work in this repo:
+
+1. Route via `.agents/skills/using-agent-skills/SKILL.md` when unsure which skill applies.
+2. Read and follow the matching skill under `.agents/skills/<name>/SKILL.md`.
+3. Open linked files under that skill’s `references/` or `.agents/references/` when the skill points to them.
+4. Prefer project skills over guessing; the user should not need to say "read the skill" each time.
+
+Project context and commands live in `AGENTS.md` — follow it.
