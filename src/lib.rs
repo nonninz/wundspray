@@ -7,3 +7,4 @@ pub mod logging;
 pub mod map;
 pub mod routes;
 pub mod sanitize;
+pub mod ui;

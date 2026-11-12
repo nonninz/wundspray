@@ -8,6 +8,9 @@ It unwraps tracking redirects and strips tracking parameters — including
 referral-marketing tags like Amazon `tag` — then returns a **stable JSON
 envelope**.
 
+Open `/` in a browser for a small same-origin clean form (HTML/CSS/JS
+embedded in the binary). The API remains at `POST /clean`.
+
 Built for a small Docker footprint (static musl binary on `scratch`).
 
 ## Credits & licenses
@@ -51,6 +54,12 @@ tokens) and is **not** modified by sync.
 
 This project is not affiliated with or endorsed by antonio-orionus, ClearURLs,
 Brave, Mozilla, or AdGuard.
+
+## Browser UI
+
+With the server running (`cargo run` or the Docker image), open
+`http://localhost:8080/` — paste a URL, submit, and see the cleaned result.
+The page calls `POST /clean` same-origin. Spec: [`SPEC-ui.md`](SPEC-ui.md).
 
 ## API
 
