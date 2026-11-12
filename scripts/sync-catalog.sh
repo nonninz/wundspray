@@ -1,19 +1,40 @@
 #!/usr/bin/env bash
 # Sync vendored catalog + Cargo pin from a published url-sanitize release tag.
-# Usage: scripts/sync-catalog.sh vX.Y.Z
+# Usage: scripts/sync-catalog.sh [vX.Y.Z]
+#        make sync-catalog
 #        make sync-catalog VERSION=vX.Y.Z
+# With no argument, uses the newest url-sanitize-core version on crates.io.
 # Does not modify catalog/overlay.json.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-if [[ $# -ne 1 ]]; then
-  echo "usage: $0 vX.Y.Z" >&2
+UA="wundspray-sync-catalog (https://github.com/nonninz/wundspray)"
+UPSTREAM_REPO="antonio-orionus/url-sanitize"
+CATALOG_PATH="crates/url-sanitize/catalog/catalog.json"
+
+if [[ $# -gt 1 ]]; then
+  echo "usage: $0 [vX.Y.Z]" >&2
   exit 2
 fi
 
-VERSION_RAW="$1"
+if [[ $# -eq 1 ]]; then
+  VERSION_RAW="$1"
+else
+  echo "No VERSION given; looking up newest url-sanitize-core on crates.io..."
+  newest="$(curl -fsSL \
+    -H "User-Agent: ${UA}" \
+    https://crates.io/api/v1/crates/url-sanitize-core \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["crate"]["newest_version"])')"
+  if [[ -z "$newest" ]]; then
+    echo "Could not read newest_version from crates.io" >&2
+    exit 1
+  fi
+  VERSION_RAW="v${newest}"
+  echo "Using ${VERSION_RAW}"
+fi
+
 if [[ "$VERSION_RAW" != v* ]]; then
   echo "VERSION must look like vX.Y.Z (got: $VERSION_RAW)" >&2
   exit 2
@@ -21,9 +42,6 @@ fi
 
 TAG="$VERSION_RAW"
 CRATE_VERSION="${TAG#v}"
-UPSTREAM_REPO="antonio-orionus/url-sanitize"
-CATALOG_PATH="crates/url-sanitize/catalog/catalog.json"
-UA="wundspray-sync-catalog (https://github.com/nonninz/wundspray)"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
