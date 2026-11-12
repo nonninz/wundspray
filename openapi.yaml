@@ -23,10 +23,53 @@ servers:
     description: Local default
 
 tags:
+  - name: ui
   - name: clean
   - name: health
 
 paths:
+  /:
+    get:
+      tags: [ui]
+      operationId: getUi
+      summary: Clean-tool HTML page
+      description: |
+        Embedded browser UI for cleaning a URL via same-origin `POST /clean`.
+        Assets are served from `/assets/app.css` and `/assets/app.js`.
+      responses:
+        "200":
+          description: HTML document
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /assets/app.css:
+    get:
+      tags: [ui]
+      operationId: getUiCss
+      summary: Clean-tool stylesheet
+      responses:
+        "200":
+          description: CSS stylesheet
+          content:
+            text/css:
+              schema:
+                type: string
+
+  /assets/app.js:
+    get:
+      tags: [ui]
+      operationId: getUiJs
+      summary: Clean-tool script
+      responses:
+        "200":
+          description: JavaScript module for the form
+          content:
+            text/javascript:
+              schema:
+                type: string
+
   /health:
     get:
       tags: [health]

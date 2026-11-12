@@ -55,6 +55,114 @@ async fn body_json(response: axum::response::Response) -> Value {
     serde_json::from_slice(&bytes).expect("json")
 }
 
+async fn body_text(response: axum::response::Response) -> String {
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    String::from_utf8(bytes.to_vec()).expect("utf8")
+}
+
+fn content_type(response: &axum::response::Response) -> &str {
+    response
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+}
+
+#[tokio::test]
+async fn ui_index_ok() {
+    let response = test_app()
+        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(
+        content_type(&response).starts_with("text/html"),
+        "content-type={}",
+        content_type(&response)
+    );
+    assert_eq!(
+        response
+            .headers()
+            .get("x-content-type-options")
+            .and_then(|v| v.to_str().ok()),
+        Some("nosniff")
+    );
+    assert_eq!(
+        response
+            .headers()
+            .get("content-security-policy")
+            .and_then(|v| v.to_str().ok()),
+        Some("default-src 'self'; frame-ancestors 'none'")
+    );
+    assert_eq!(
+        response
+            .headers()
+            .get("x-frame-options")
+            .and_then(|v| v.to_str().ok()),
+        Some("DENY")
+    );
+    assert!(response
+        .headers()
+        .get("referrer-policy")
+        .and_then(|v| v.to_str().ok())
+        .is_some());
+
+    let body = body_text(response).await;
+    assert!(body.contains("wundspray"));
+    assert!(body.contains("/assets/app.css"));
+    assert!(body.contains("/assets/app.js"));
+}
+
+#[tokio::test]
+async fn ui_css_ok() {
+    let response = test_app()
+        .oneshot(
+            Request::builder()
+                .uri("/assets/app.css")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(
+        content_type(&response).starts_with("text/css"),
+        "content-type={}",
+        content_type(&response)
+    );
+    let body = body_text(response).await;
+    assert!(!body.is_empty());
+}
+
+#[tokio::test]
+async fn ui_js_ok() {
+    let response = test_app()
+        .oneshot(
+            Request::builder()
+                .uri("/assets/app.js")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let ct = content_type(&response);
+    assert!(
+        ct.starts_with("text/javascript") || ct.starts_with("application/javascript"),
+        "content-type={ct}"
+    );
+    let body = body_text(response).await;
+    assert!(body.contains("/clean"));
+}
+
 #[tokio::test]
 async fn health_ok() {
     let response = test_app()

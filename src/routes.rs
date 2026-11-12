@@ -18,6 +18,7 @@ use uuid::Uuid;
 use crate::client_ip::{parse_trusted_proxies, resolve_client_ip, ClientIpResolution};
 use crate::map::{map_result, Action};
 use crate::sanitize::sanitize;
+use crate::ui;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -66,6 +67,9 @@ pub struct ErrorBody {
 
 pub fn app(state: AppState) -> Router {
     Router::new()
+        .route("/", get(ui::index))
+        .route("/assets/app.css", get(ui::app_css))
+        .route("/assets/app.js", get(ui::app_js))
         .route("/health", get(health))
         .route("/clean", post(clean_handler))
         .route("/sanitize", post(sanitize_deprecated))

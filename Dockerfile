@@ -16,6 +16,7 @@ RUN mkdir src \
     && rm -rf src
 
 COPY catalog ./catalog
+COPY static ./static
 COPY src ./src
 
 # Rebuild our crate, then re-link only the final binary as fully static so
