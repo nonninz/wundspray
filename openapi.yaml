@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: wundspray
-  version: 0.2.1
+  version: 0.3.0
   summary: Strip tracking parameters and unwrap tracking redirects from URLs
   description: |
     Tiny HTTP service that sanitizes a single URL using
