@@ -39,6 +39,9 @@ Embedded catalog (rule data)
 File: catalog/catalog.json
 Pin:  catalog/PIN.txt  (upstream tag v2.4.1 / url-sanitize-core 2.4.1)
 
+Local overlay (custom rules, this repo): catalog/overlay.json
+Merged at build time in src/sanitize.rs; survives catalog sync.
+
 Sources bundled in that catalog:
 
   - ClearURLs Rules
@@ -58,14 +61,21 @@ The AdGuard URL Tracking filter (GPL-3.0) is NOT included.
 Corresponding source (LGPL / MPL)
 ========================================================================
 
-Catalog source as shipped: catalog/catalog.json in this repository
-(and the git tag/commit that built a given release).
+Catalog source as shipped: catalog/catalog.json and catalog/overlay.json
+in this repository (and the git tag/commit that built a given release).
 
 To rebuild wundspray with unmodified or modified rule data:
 
-  1. Replace or edit catalog/catalog.json
+  1. Replace or edit catalog/catalog.json and/or catalog/overlay.json
   2. cargo build --release
   # or: docker build -t wundspray .
 
+To refresh the upstream blob from a published url-sanitize release
+(crate + catalog + PIN as one unit; overlay untouched):
+
+  make sync-catalog            # newest crates.io release, or VERSION=vX.Y.Z
+  make check
+
 Upstream catalog provenance for the pinned tag:
   https://github.com/antonio-orionus/url-sanitize/tree/v2.4.1/crates/url-sanitize/catalog
+

@@ -24,6 +24,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: catalog pin alignment
+        run: ./scripts/check-catalog-pin.sh
+
       - name: rustfmt
         run: cargo fmt --check
 
@@ -32,3 +35,4 @@ jobs:
 
       - name: test
         run: cargo test
+
