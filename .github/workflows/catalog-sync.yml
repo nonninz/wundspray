@@ -2,8 +2,8 @@ name: catalog-sync
 
 on:
   schedule:
-    # Weekly Monday 06:17 UTC
-    - cron: "17 6 * * 1"
+    # Nightly 06:17 UTC
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -64,7 +64,7 @@ jobs:
 
       - name: Run catalog sync
         if: steps.need.outputs.needed == 'true'
-        run: make sync-catalog VERSION=v${{ steps.crates.outputs.version }}
+        run: make sync-catalog
 
       - name: Verify
         if: steps.need.outputs.needed == 'true'
@@ -76,14 +76,28 @@ jobs:
         with:
           branch: chore/catalog-sync-v${{ steps.crates.outputs.version }}
           delete-branch: true
-          title: "chore(catalog): sync url-sanitize-core ${{ steps.crates.outputs.version }}"
+          title: "Refresh URL cleaning rules to url-sanitize ${{ steps.crates.outputs.version }}"
           commit-message: "chore(catalog): sync url-sanitize-core ${{ steps.crates.outputs.version }}"
           body: |
-            Automated sync from published crates.io `url-sanitize-core ${{ steps.crates.outputs.version }}`.
+            ## What this does
 
-            Updates as one unit:
-            - `Cargo.toml` / lockfile `url-sanitize-core`
-            - `catalog/catalog.json`
-            - `catalog/PIN.txt`
+            Upstream published **url-sanitize-core ${{ steps.crates.outputs.version }}** on crates.io.
+            This PR pulls that release into wundspray so the embedded cleaning rules stay in sync
+            with the library we depend on.
 
-            Does **not** modify `catalog/overlay.json`.
+            ## What changed
+
+            - Bumped `url-sanitize-core` to ${{ steps.crates.outputs.version }}
+            - Replaced `catalog/catalog.json` with the catalog from that release
+            - Rewrote `catalog/PIN.txt` to match
+
+            ## What did not change
+
+            - `catalog/overlay.json` (local Instagram hotfixes) is left alone
+            - No API or runtime config changes
+            - No breaking service behavior expected beyond newer upstream strip/unwrap rules
+
+            ## Operator notes
+
+            Nothing to reconfigure. Merge when CI is green; the next image/release build will
+            embed the updated rules automatically.
